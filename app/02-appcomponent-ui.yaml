@@ -1,0 +1,22 @@
+apiVersion: app.appvia.io/v2beta1
+kind: AppComponent
+metadata:
+  name: wfexampleapp-ui
+spec:
+  application: wfexampleapp
+  container:
+    containers:
+    - image: ghcr.io/appvia/wf-example-app/wfexample
+      name: container-1
+      ports:
+      - containerPort: 8080
+        name: ui
+        protocol: TCP
+    expose:
+      container: container-1
+      port: 8080
+    replicas: 1
+    tls: true
+  key: ui
+  name: ui
+  type: Container
