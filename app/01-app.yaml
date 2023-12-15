@@ -1,0 +1,7 @@
+apiVersion: app.appvia.io/v2beta1
+kind: Application
+metadata:
+  name: wfexampleapp
+spec:
+  cloud: azure
+  name: wfexampleapp
