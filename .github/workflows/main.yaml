@@ -4,6 +4,14 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read # Required for actions/checkout
+  checks: write # Set status of checks
+  issues: write # Comment the PR as we go
+  statuses: write # Set commit statuses as tests pass or fail
+  pull-requests: write # Get/comment the PR itself
+  packages: write # Write to ghcr.io
+
 jobs:
   build:
     runs-on: ubuntu-latest
