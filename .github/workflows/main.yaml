@@ -35,9 +35,7 @@ jobs:
     - name: Build and Push to GitHub Packages
       id: build-push
       uses: docker/build-push-action@v5
-      timeout-minutes: 3
       with:
-        context: .
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
