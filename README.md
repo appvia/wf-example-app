@@ -9,7 +9,8 @@ wf create workspaceaccesstoken wf-example-app-ghactions --reset-token --show-tok
 ```
 
 Permission the token:
-* Add cluster.deployment on an existing cluster to host the PR environments (e.g. demo-envs)
+* Add cluster.deployment on an existing cluster to host the PR environments (e.g. demo-envs) - note the name of the cluster
+* Add workspace.appdeployer and workspace.appmanager roles
 
 Configure other variables, adjust the values as appropriate for your app, environment, and PR preview cluster:
 ```
