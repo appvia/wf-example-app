@@ -1,0 +1,53 @@
+name: main-publish
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+    - name: Login to docker registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Docker metadata
+      id: meta
+      uses: docker/metadata-action@v3
+      with:
+        images: ghcr.io/${{ github.repository }}/wfexample
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr,suffix=-{{sha}}
+    - name: Build and Push to GitHub Packages
+      id: build-push
+      uses: docker/build-push-action@v2
+      continue-on-error: true
+      timeout-minutes: 3
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-live:
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/appvia-wayfinder/wftoolbox:latest
+    steps:
+      - name: Deploy to app environment
+        id: deploy
+        env:
+          WAYFINDER_SERVER: ${{ vars.WAYFINDER_SERVER }}
+          WAYFINDER_WORKSPACE: ${{ vars.WAYFINDER_WORKSPACE }}
+          WAYFINDER_TOKEN: ${{ secrets.WAYFINDER_TOKEN }}
+        run: |
+          wf deploy component ${{ vars.APP_NAME }} ${{ vars.LIVE_ENV_NAME }}  --component ${{ vars.APP_COMPONENT_NAME }} --image ${{ needs.build.outputs.tags }} --wait-for-ready 3m

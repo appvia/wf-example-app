@@ -1,0 +1,77 @@
+name: build-publish
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+    - name: Login to docker registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Docker metadata
+      id: meta
+      uses: docker/metadata-action@v3
+      with:
+        images: ghcr.io/${{ github.repository }}/wfexample
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr,suffix=-{{sha}}
+    - name: Build and Push to GitHub Packages
+      id: build-push
+      uses: docker/build-push-action@v2
+      continue-on-error: true
+      timeout-minutes: 3
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-pr-preview:
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/appvia-wayfinder/wftoolbox:latest
+    steps:
+      - name: Deploy to app environment
+        id: deploy
+        env:
+          WAYFINDER_SERVER: ${{ vars.WAYFINDER_SERVER }}
+          WAYFINDER_WORKSPACE: ${{ vars.WAYFINDER_WORKSPACE }}
+          WAYFINDER_TOKEN: ${{ secrets.WAYFINDER_TOKEN }}
+          IMAGE_TAG: ${{ needs.build.outputs.tags }}
+        run: |
+          export ENV_NAME="pr-${{ github.event.pull_request.number }}"
+          wf create appenv --app ${{ vars.APP_NAME }} --env ${ENV_NAME} --cluster ${{ vars.PR_PREVIEW_CLUSTER }} --stage nonprod --wildcard-certs || true
+          wf deploy component ${{ vars.APP_NAME }} ${ENV_NAME} --component ${{ vars.APP_COMPONENT_NAME }} --image ${IMAGE_TAG} --wait-for-ready 3m
+          echo "PREVIEW_URL=$(wf get appenv ${{ vars.APP_NAME }}-${ENV_NAME} -o json | jq -r '.status.deployment.components[0].endpoint')" >> $GITHUB_OUTPUT
+
+      - name: Comment the PR
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const commentInfo = { issue_number: context.issue.number, owner: context.repo.owner, repo: context.repo.repo }
+            const commentIdentifier = 'Preview available for this PR'
+            const baseURL = '${{ steps.deploy.outputs.PREVIEW_URL }}'
+            const deployed = new Date().toUTCString()
+            const comment = { ...commentInfo, body: `${commentIdentifier}:
+            ${baseURL}
+            <sub>Last deployed: ${deployed}</sub>
+            `}
+
+            for (let c of (await github.rest.issues.listComments(commentInfo)).data) {
+              if (c.user.type === 'Bot' && c.body.includes(commentIdentifier)) {
+                github.rest.issues.updateComment({ ...comment, comment_id: c.id })
+                return
+              }
+            }
+            github.rest.issues.createComment(comment)

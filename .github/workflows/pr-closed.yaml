@@ -1,0 +1,20 @@
+name: pr-preview-teardown
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  teardown-preview:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/appvia-wayfinder/wftoolbox:latest
+    steps:
+      - name: Clean up old resources
+        env:
+          WAYFINDER_SERVER: ${{ vars.WAYFINDER_SERVER }}
+          WAYFINDER_WORKSPACE: ${{ vars.WAYFINDER_WORKSPACE }}
+          WAYFINDER_TOKEN: ${{ secrets.WAYFINDER_TOKEN }}
+        run: |
+          export ENV_NAME="pr-${{ github.event.pull_request.number }}"
+          wf delete appenv ${{ vars.APP_NAME }}-${ENV_NAME} || true
