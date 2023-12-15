@@ -3,6 +3,8 @@
 An example app to demonstrate using Wayfinder for ephemeral PR previews and deploying to a 
 long-lived environment on merge.
 
+The main branch of this repository deploys to https://ui-prod-wfexam9lvp.demo.wayfinder.run/
+
 ## Using the example
 
 ### 1. Create the app in Wayfinder
