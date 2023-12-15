@@ -29,7 +29,7 @@ jobs:
       with:
         images: ghcr.io/${{ github.repository }}/wfexample
         tags: |
-          type=ref,event=branch
+          type=ref,event=branch,suffix=-{{sha}}
           type=ref,event=pr,suffix=-{{sha}}
     - name: Build and Push to GitHub Packages
       id: build-push
